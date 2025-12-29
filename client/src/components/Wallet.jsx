@@ -151,9 +151,9 @@ export default function Wallet() {
                     <TrendUp size={24} color="var(--success)" />
                     Top Up Wallet
                 </h3>
-                <form onSubmit={handleTopUp} style={{ display: 'flex', gap: '1rem' }}>
-                    <input type="number" className="input-field" placeholder="Amount to add" value={amount} onChange={e => setAmount(e.target.value)} required min="1" />
-                    <button disabled={loading} className="btn btn-primary" type="submit">{loading ? 'Processing...' : 'Add Funds'}</button>
+                <form onSubmit={handleTopUp} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <input type="number" className="input-field" placeholder="Amount to add" value={amount} onChange={e => setAmount(e.target.value)} required min="1" style={{ flex: '1 1 200px' }} />
+                    <button disabled={loading} className="btn btn-primary" type="submit" style={{ flex: '1 1 150px' }}>{loading ? 'Processing...' : 'Add Funds'}</button>
                 </form>
                 <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Note: This is a demo transaction system. No real money is involved.</p>
             </div>
@@ -164,7 +164,7 @@ export default function Wallet() {
                     Withdraw Funds
                 </h3>
                 <form onSubmit={handleWithdraw} style={{ display: 'grid', gap: '1rem' }}>
-                    <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div className="grid-mobile-stack" style={{ display: 'flex', gap: '1rem' }}>
                         <input type="number" className="input-field" placeholder="Amount to withdraw" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} required min="1" style={{ flex: 1 }} />
                         <input type="text" className="input-field" placeholder="UPI ID / Bank Account" value={upiId} onChange={e => setUpiId(e.target.value)} required style={{ flex: 2 }} />
                     </div>

@@ -349,13 +349,13 @@ export default function Dashboard() {
             {showCreate && (
                 <div className="card" style={{ marginBottom: '2rem', animation: 'fadeIn 0.3s' }}>
                     <h3 style={{ marginBottom: '1rem' }}>Create New Task</h3>
-                    <form onSubmit={handleCreate} style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr' }}>
+                    <form onSubmit={handleCreate} className="grid-mobile-stack" style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr' }}>
                         <input
-                            className="input-field"
                             placeholder="Task Title"
                             value={newTask.title}
                             onChange={e => setNewTask({ ...newTask, title: e.target.value })}
                             required
+                            className="input-field grid-mobile-full-width"
                             style={{ gridColumn: 'span 2' }}
                         />
                         <textarea
@@ -425,38 +425,35 @@ export default function Dashboard() {
                 </div>
             )}
 
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className={`btn ${filter === 'all' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setFilter('all')}>All Tasks</button>
-                    <button className={`btn ${filter === 'open' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setFilter('open')}>Open Requests</button>
-                    <button className={`btn ${filter === 'my-tasks' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setFilter('my-tasks')}>My Tasks</button>
-                </div>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                <button className={`btn ${filter === 'all' ? 'btn-primary' : 'btn-outline'}`} style={{ flex: '1 1 auto' }} onClick={() => setFilter('all')}>All</button>
+                <button className={`btn ${filter === 'open' ? 'btn-primary' : 'btn-outline'}`} style={{ flex: '1 1 auto' }} onClick={() => setFilter('open')}>Open</button>
+                <button className={`btn ${filter === 'my-tasks' ? 'btn-primary' : 'btn-outline'}`} style={{ flex: '1 1 auto' }} onClick={() => setFilter('my-tasks')}>My Tasks</button>
+            </div>
 
-                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <input
-                        className="input-field"
-                        placeholder="Search tasks..."
-                        style={{ width: '200px', padding: '0.4rem' }}
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Filter by:</span>
-                    <select
-                        className="input-field"
-                        style={{ width: 'auto', padding: '0.4rem' }}
-                        value={categoryFilter}
-                        onChange={(e) => setCategoryFilter(e.target.value)}
-                    >
-                        <option value="All">All Categories</option>
-                        <option>Debugging</option>
-                        <option>Explanation</option>
-                        <option>Code Review</option>
-                        <option>Tutoring</option>
-                        <option>Graphic Design</option>
-                        <option>Content Writing</option>
-                        <option>Video Editing</option>
-                    </select>
-                </div>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <input
+                    className="input-field"
+                    placeholder="Search tasks..."
+                    style={{ flex: '2 1 200px', padding: '0.6rem' }}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <select
+                    className="input-field"
+                    style={{ flex: '1 1 auto', padding: '0.6rem' }}
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                >
+                    <option value="All">All Categories</option>
+                    <option>Debugging</option>
+                    <option>Explanation</option>
+                    <option>Code Review</option>
+                    <option>Tutoring</option>
+                    <option>Graphic Design</option>
+                    <option>Content Writing</option>
+                    <option>Video Editing</option>
+                </select>
             </div>
 
             {loading ? <p>Loading tasks...</p> : (

@@ -134,3 +134,101 @@ button {
   background: var(--surface-hover);
   border-radius: 4px;
 }
+
+@media (max-width: 768px) {
+  .auth-card-container {
+    padding: 0 0.5rem;
+    margin: 1rem auto !important;
+  }
+
+  .hide-mobile {
+    display: none !important;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+
+  .container {
+    padding: 0 0.75rem;
+  }
+
+  h1 {
+    font-size: 1.75rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+  }
+
+  /* Navbar adjustments */
+  nav {
+    padding: 0.75rem !important;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  nav .btn {
+    padding: 0.4rem 0.6rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0 0.5rem;
+  }
+
+  .card {
+    padding: 0.75rem;
+  }
+
+  /* Stack form elements on small screens */
+  .grid-mobile-stack {
+    grid-template-columns: 1fr !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .grid-mobile-full-width {
+    grid-column: span 1 !important;
+  }
+}
+
+/* Auth container */
+.auth-card-container {
+  width: 100%;
+  max-width: 400px;
+  margin: 2rem auto;
+}
+
+/* Mobile Sidebar/Drawer support if needed */
+.mobile-only {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: block;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}

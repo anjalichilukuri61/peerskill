@@ -24,7 +24,7 @@ export default function Login() {
     }
 
     return (
-        <div style={{ maxWidth: '400px', margin: '2rem auto' }}>
+        <div className="auth-card-container">
             <div className="card">
                 <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Login</h2>
                 {error && <div style={{ color: 'var(--error)', marginBottom: '1rem', padding: '0.5rem', background: '#ef444422', borderRadius: 'var(--radius)' }}>{error}</div>}

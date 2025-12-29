@@ -1,14 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { PaperPlaneRight, X } from 'phosphor-react';
 
 export default function Chat({ taskId, onClose, taskTitle }) {
     const { currentUser, userData } = useAuth();
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
+    const [taskData, setTaskData] = useState(null);
     const bottomRef = useRef(null);
+
+    useEffect(() => {
+        if (!taskId) return;
+        async function fetchTask() {
+            const docRef = doc(db, 'tasks', taskId);
+            const snapshot = await getDoc(docRef);
+            if (snapshot.exists()) {
+                setTaskData(snapshot.data());
+            }
+        }
+        fetchTask();
+    }, [taskId]);
 
     useEffect(() => {
         if (!taskId) return;
@@ -46,6 +59,25 @@ export default function Chat({ taskId, onClose, taskTitle }) {
                 senderName: userData?.name || 'User',
                 createdAt: serverTimestamp()
             });
+
+            // Send notification to the other party
+            if (taskData) {
+                const recipientId = currentUser.uid === taskData.seekerId
+                    ? taskData.providerId
+                    : taskData.seekerId;
+
+                if (recipientId) {
+                    await addDoc(collection(db, 'notifications'), {
+                        userId: recipientId,
+                        message: `New message from ${userData?.name || 'User'} regarding "${taskData.title}"`,
+                        type: 'chat',
+                        relatedId: taskId,
+                        createdAt: new Date().toISOString(),
+                        read: false
+                    });
+                }
+            }
+
             setNewMessage('');
         } catch (error) {
             console.error("Error sending message:", error);
@@ -54,11 +86,12 @@ export default function Chat({ taskId, onClose, taskTitle }) {
 
     return (
         <div style={{
-            position: 'fixed', bottom: '20px', right: '20px', width: '350px', height: '500px',
+            position: 'fixed', bottom: '20px', right: '20px', width: '350px', maxWidth: 'calc(100vw - 40px)', height: '500px',
+            maxHeight: 'calc(100vh - 100px)',
             background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
             boxShadow: '0 4px 12px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column',
             zIndex: 1000
-        }}>
+        }} className="fade-in">
             {/* Header */}
             <div style={{
                 padding: '1rem', borderBottom: '1px solid var(--border)',
