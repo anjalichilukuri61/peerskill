@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { auth } from '../firebase'; // Need auth to get token for backend
+import { auth, storage } from '../firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import API_URL from '../config/api';
 
 export default function Register() {
@@ -9,7 +10,7 @@ export default function Register() {
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
     const [role, setRole] = useState('seeker');
-    const [error, setError] = useState('');
+    const [idCard, setIdCard] = useState(null);
     const [loading, setLoading] = useState(false);
     const { signup } = useAuth();
     const navigate = useNavigate();
@@ -23,7 +24,15 @@ export default function Register() {
             const userCredential = await signup(email, password);
             const user = userCredential.user;
 
-            // 2. Create User Profile in Backend (Firestore)
+            // 2. Upload ID Card if selected
+            let collegeIdUrl = '';
+            if (idCard) {
+                const storageRef = ref(storage, `college_ids/${user.uid}`);
+                const snapshot = await uploadBytes(storageRef, idCard);
+                collegeIdUrl = await getDownloadURL(snapshot.ref);
+            }
+
+            // 3. Create User Profile in Backend (Firestore)
             const token = await user.getIdToken();
             const res = await fetch(`${API_URL}/api/auth/register`, {
                 method: 'POST',
@@ -31,7 +40,7 @@ export default function Register() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ name, email, role })
+                body: JSON.stringify({ name, email, role, collegeIdUrl })
             });
 
             if (!res.ok) {
@@ -75,6 +84,17 @@ export default function Register() {
                         onChange={e => setPassword(e.target.value)}
                         required
                     />
+                    <div style={{ display: 'grid', gap: '0.25rem' }}>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Upload College ID Card (Mandatory)</label>
+                        <input
+                            type="file"
+                            className="input-field"
+                            accept="image/*"
+                            onChange={e => setIdCard(e.target.files[0])}
+                            required
+                        />
+                    </div>
+
                     <select
                         className="input-field"
                         value={role}

@@ -103,92 +103,70 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// PUT /api/tasks/:id/accept
-router.put('/:id/accept', verifyToken, async (req, res) => {
+// POST /api/tasks/:id/apply
+router.post('/:id/apply', verifyToken, async (req, res) => {
     try {
-        console.log('Accept request received for task:', req.params.id);
-        console.log('User UID:', req.user.uid);
-        console.log('Requested price:', req.body.price);
-
+        const { price } = req.body;
         const taskRef = db.collection('tasks').doc(req.params.id);
         const taskDoc = await taskRef.get();
 
-        if (!taskDoc.exists) {
-            console.log('Task not found');
-            return res.status(404).json({ error: 'Task not found' });
-        }
-        if (taskDoc.data().status !== 'open') {
-            console.log('Task not open, current status:', taskDoc.data().status);
-            return res.status(400).json({ error: 'Task not open' });
-        }
-        if (taskDoc.data().seekerId === req.user.uid) {
-            console.log('User trying to accept own task');
-            return res.status(400).json({ error: 'Cannot accept own task' });
-        }
+        if (!taskDoc.exists) return res.status(404).json({ error: 'Task not found' });
+        if (taskDoc.data().status !== 'open') return res.status(400).json({ error: 'Task no longer open' });
+        if (taskDoc.data().seekerId === req.user.uid) return res.status(400).json({ error: 'Cannot apply for own task' });
 
-        const { price } = req.body;
-        const originalBudget = taskDoc.data().budget;
-        const proposedPrice = price ? Number(price) : originalBudget;
+        const userDoc = await db.collection('users').doc(req.user.uid).get();
+        const applicantName = userDoc.exists ? userDoc.data().name : 'Unknown User';
 
-        const updates = {
-            providerId: req.user.uid,
-            proposedBudget: proposedPrice,
-            originalBudget: originalBudget
+        const application = {
+            userId: req.user.uid,
+            name: applicantName,
+            price: Number(price),
+            createdAt: new Date().toISOString()
         };
 
-        // If price is different, require seeker approval
-        if (proposedPrice !== originalBudget) {
-            updates.status = 'pending_approval';
-            console.log('Price changed, setting status to pending_approval');
-        } else {
-            updates.status = 'accepted';
-            updates.budget = proposedPrice;
-            console.log('Price unchanged, setting status to accepted');
-        }
-
-        await taskRef.update(updates);
-        await taskRef.update(updates);
-        console.log('Task accepted successfully. Updates:', updates);
+        // Add to applicants array
+        const admin = require('firebase-admin');
+        await taskRef.update({
+            applicants: admin.firestore.FieldValue.arrayUnion(application)
+        });
 
         // Notify Seeker
         await db.collection('notifications').add({
             userId: taskDoc.data().seekerId,
-            message: proposedPrice !== originalBudget
-                ? `Counter-offer received for "${taskDoc.data().title}"`
-                : `Your task "${taskDoc.data().title}" has been accepted!`,
+            message: `${applicantName} applied for "${taskDoc.data().title}" at ₹${price}`,
             type: 'info',
             relatedId: req.params.id,
             createdAt: new Date().toISOString(),
             read: false
         });
 
-        res.json({ success: true, status: updates.status });
+        res.json({ success: true });
     } catch (error) {
-        console.error('Error accepting task:', error);
+        console.error('Error applying for task:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// PUT /api/tasks/:id/approve-price
-router.put('/:id/approve-price', verifyToken, async (req, res) => {
+// POST /api/tasks/:id/hire
+router.post('/:id/hire', verifyToken, async (req, res) => {
     try {
+        const { providerId, price } = req.body;
         const taskRef = db.collection('tasks').doc(req.params.id);
         const taskDoc = await taskRef.get();
 
         if (!taskDoc.exists) return res.status(404).json({ error: 'Task not found' });
-        if (taskDoc.data().seekerId !== req.user.uid) return res.status(403).json({ error: 'Only task owner can approve price' });
-        if (taskDoc.data().status !== 'pending_approval') return res.status(400).json({ error: 'Task is not pending approval' });
+        if (taskDoc.data().seekerId !== req.user.uid) return res.status(403).json({ error: 'Not authorized' });
 
         await taskRef.update({
-            status: 'accepted',
-            budget: taskDoc.data().proposedBudget,
-            isNegotiated: true
+            providerId,
+            budget: Number(price),
+            status: 'accepted'
         });
 
         // Notify Provider
         await db.collection('notifications').add({
-            userId: taskDoc.data().providerId,
-            message: `Your price for "${taskDoc.data().title}" was approved!`,
+            userId: providerId,
+            message: `Congratulations! You were hired for "${taskDoc.data().title}". You can proceed now.`,
             type: 'success',
             relatedId: req.params.id,
             createdAt: new Date().toISOString(),
@@ -197,35 +175,12 @@ router.put('/:id/approve-price', verifyToken, async (req, res) => {
 
         res.json({ success: true });
     } catch (error) {
-        console.error('Error approving price:', error);
+        console.error('Error hiring for task:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// PUT /api/tasks/:id/reject-price
-router.put('/:id/reject-price', verifyToken, async (req, res) => {
-    try {
-        const taskRef = db.collection('tasks').doc(req.params.id);
-        const taskDoc = await taskRef.get();
-
-        if (!taskDoc.exists) return res.status(404).json({ error: 'Task not found' });
-        if (taskDoc.data().seekerId !== req.user.uid) return res.status(403).json({ error: 'Only task owner can reject price' });
-        if (taskDoc.data().status !== 'pending_approval') return res.status(400).json({ error: 'Task is not pending approval' });
-
-        // Return task to open status
-        await taskRef.update({
-            status: 'open',
-            providerId: null,
-            proposedBudget: null,
-            budget: taskDoc.data().originalBudget
-        });
-
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Error rejecting price:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
+// Negotiation routes have been replaced by application/hire flow
 
 // PUT /api/tasks/:id/submit
 router.put('/:id/submit', verifyToken, async (req, res) => {

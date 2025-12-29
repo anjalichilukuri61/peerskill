@@ -129,31 +129,55 @@ export default function Dashboard() {
         }
     }
 
-    async function handleAccept(taskId, currentBudget) {
-        // User wants to specify how much they charge.
-        // We can ask if they agree to the budget or want to propose a rate? 
-        // For simplicity and per requirement "specify how much they charge", let's ask for an amount.
+    async function handleApply(taskId, currentBudget) {
         const offer = window.prompt(`The budget is ₹${currentBudget}. How much do you want to charge for this task?`, currentBudget);
 
-        if (offer === null) return; // Cancelled
+        if (offer === null) return;
         if (!offer || isNaN(offer) || offer <= 0) return addToast('Please enter a valid amount.', 'error');
 
         try {
             const token = await currentUser.getIdToken();
-            const res = await fetch(`${API_URL}/api/tasks/${taskId}/accept`, {
-                method: 'PUT',
+            const res = await fetch(`${API_URL}/api/tasks/${taskId}/apply`, {
+                method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json', // Need content type for body
+                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ price: offer }) // Send the agreed price
+                body: JSON.stringify({ price: offer })
             });
+
             if (res.ok) {
                 fetchTasks();
-                addToast(`Task accepted at ₹${offer}`, 'success');
+                addToast(`Application sent at ₹${offer}! Seeker will notify you if hired.`, 'success');
             } else {
                 const err = await res.json();
-                addToast(err.error || 'Failed to accept task', 'error');
+                addToast(err.error || 'Failed to apply', 'error');
+            }
+        } catch (error) {
+            console.error(error);
+            addToast('Something went wrong', 'error');
+        }
+    }
+
+    async function handleHire(taskId, providerId, price) {
+        if (!window.confirm(`Hire this person for ₹${price}?`)) return;
+        try {
+            const token = await currentUser.getIdToken();
+            const res = await fetch(`${API_URL}/api/tasks/${taskId}/hire`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ providerId, price })
+            });
+
+            if (res.ok) {
+                fetchTasks();
+                addToast('Helper hired! They have been notified to proceed.', 'success');
+            } else {
+                const err = await res.json();
+                addToast(err.error || 'Failed to hire', 'error');
             }
         } catch (error) {
             console.error(error);
@@ -247,46 +271,7 @@ export default function Dashboard() {
         setIsSubmittingReview(false);
     }
 
-    async function handleApprovePrice(taskId) {
-        try {
-            const token = await currentUser.getIdToken();
-            const res = await fetch(`${API_URL}/api/tasks/${taskId}/approve-price`, {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                fetchTasks();
-                addToast('Price approved! Task is now accepted.', 'success');
-            } else {
-                const err = await res.json();
-                addToast(err.error || 'Failed to approve price', 'error');
-            }
-        } catch (error) {
-            console.error(error);
-            addToast('Something went wrong', 'error');
-        }
-    }
-
-    async function handleRejectPrice(taskId) {
-        if (!window.confirm('Reject this price proposal? The task will return to open status.')) return;
-        try {
-            const token = await currentUser.getIdToken();
-            const res = await fetch(`${API_URL}/api/tasks/${taskId}/reject-price`, {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                fetchTasks();
-                addToast('Price rejected. Task returned to open status.', 'info');
-            } else {
-                const err = await res.json();
-                addToast(err.error || 'Failed to reject price', 'error');
-            }
-        } catch (error) {
-            console.error(error);
-            addToast('Something went wrong', 'error');
-        }
-    }
+    // Old negotiate routes removed
 
     async function handleDelete(taskId) {
         if (!window.confirm('Are you sure you want to delete this task?')) return;
@@ -575,37 +560,43 @@ export default function Dashboard() {
                         )}
                     </div>
 
-                    {/* Open tasks - show Accept button to non-owners */}
+                    {/* Open tasks - show Apply button to non-owners */}
                     {task.status === 'open' && task.seekerId !== currentUser.uid && (
-                        <button className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '0.25rem 0.75rem' }} onClick={() => handleAccept(task.id, task.budget)}>
-                            Accept
+                        <button
+                            className="btn btn-primary"
+                            style={{ fontSize: '0.8rem', padding: '0.25rem 0.75rem' }}
+                            onClick={() => handleApply(task.id, task.budget)}
+                            disabled={task.applicants?.some(a => a.userId === currentUser.uid)}
+                        >
+                            {task.applicants?.some(a => a.userId === currentUser.uid) ? 'Applied' : 'Interested'}
                         </button>
                     )}
 
-                    {/* Pending approval - show price comparison and approve/reject buttons to owner */}
-                    {task.status === 'pending_approval' && task.seekerId === currentUser.uid && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                Price: <span style={{ textDecoration: 'line-through' }}>₹{task.originalBudget}</span> → <span style={{ fontWeight: 'bold', color: 'var(--warning)' }}>₹{task.proposedBudget}</span>
-                            </div>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button
-                                    className="btn"
-                                    style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', background: 'var(--error)', color: 'white' }}
-                                    onClick={() => handleRejectPrice(task.id)}
-                                >
-                                    Reject
-                                </button>
-                                <button
-                                    className="btn btn-primary"
-                                    style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
-                                    onClick={() => handleApprovePrice(task.id)}
-                                >
-                                    Approve
-                                </button>
+                    {/* Open tasks - owners see application list */}
+                    {task.status === 'open' && task.seekerId === currentUser.uid && task.applicants?.length > 0 && (
+                        <div style={{ width: '100%', marginTop: '1rem' }}>
+                            <p style={{ fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Applicants:</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {task.applicants.map(app => (
+                                    <div key={app.userId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', background: 'var(--surface-hover)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                                        <div style={{ fontSize: '0.8rem' }}>
+                                            <strong>{app.name}</strong> • ₹{app.price}
+                                        </div>
+                                        <button
+                                            className="btn btn-primary"
+                                            style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
+                                            onClick={() => handleHire(task.id, app.userId, app.price)}
+                                        >
+                                            Hire
+                                        </button>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
+
+                    {/* Pending approval - removed */}
+
 
                     {/* Submitted Work Display for Seeker */}
                     {(task.status === 'submitted' || task.status === 'completed') && task.submissionDetails && (

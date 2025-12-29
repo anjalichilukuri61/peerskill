@@ -20,7 +20,7 @@ const verifyToken = async (req, res, next) => {
 // POST /api/auth/register
 // Create/Update user in Firestore after separate Firebase Auth signup on client
 router.post('/register', verifyToken, async (req, res) => {
-    const { name, email, role, department, year, bio, skills } = req.body;
+    const { name, email, role, department, year, bio, skills, collegeIdUrl } = req.body;
     const uid = req.user.uid;
 
     try {
@@ -42,6 +42,7 @@ router.post('/register', verifyToken, async (req, res) => {
             department: department || '',
             year: year || '',
             bio: bio || '',
+            collegeIdUrl: collegeIdUrl || '',
             walletBalance: 0,
             averageRating: 0,
             ratingCount: 0,
