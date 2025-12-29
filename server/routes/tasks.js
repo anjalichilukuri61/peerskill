@@ -307,4 +307,36 @@ router.delete('/:id', verifyToken, async (req, res) => {
     }
 });
 
+// POST /api/tasks/:id/chat-notify
+router.post('/:id/chat-notify', verifyToken, async (req, res) => {
+    try {
+        const { message } = req.body;
+        const taskRef = db.collection('tasks').doc(req.params.id);
+        const taskDoc = await taskRef.get();
+
+        if (!taskDoc.exists) return res.status(404).json({ error: 'Task not found' });
+
+        const taskData = taskDoc.data();
+        const recipientId = req.user.uid === taskData.seekerId
+            ? taskData.providerId
+            : taskData.seekerId;
+
+        if (recipientId) {
+            await db.collection('notifications').add({
+                userId: recipientId,
+                message: message || `New message regarding "${taskData.title}"`,
+                type: 'chat',
+                relatedId: req.params.id,
+                createdAt: new Date().toISOString(),
+                read: false
+            });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error sending chat notification:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;

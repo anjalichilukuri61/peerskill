@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { PaperPlaneRight, X } from 'phosphor-react';
+import API_URL from '../config/api';
 
 export default function Chat({ taskId, onClose, taskTitle }) {
     const { currentUser, userData } = useAuth();
@@ -60,23 +61,18 @@ export default function Chat({ taskId, onClose, taskTitle }) {
                 createdAt: serverTimestamp()
             });
 
-            // Send notification to the other party
-            if (taskData) {
-                const recipientId = currentUser.uid === taskData.seekerId
-                    ? taskData.providerId
-                    : taskData.seekerId;
-
-                if (recipientId) {
-                    await addDoc(collection(db, 'notifications'), {
-                        userId: recipientId,
-                        message: `New message from ${userData?.name || 'User'} regarding "${taskData.title}"`,
-                        type: 'chat',
-                        relatedId: taskId,
-                        createdAt: new Date().toISOString(),
-                        read: false
-                    });
-                }
-            }
+            // Send notification to the other party via Backend (more secure)
+            const token = await currentUser.getIdToken();
+            fetch(`${API_URL}/api/tasks/${taskId}/chat-notify`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    message: `New message from ${userData?.name || 'User'} regarding "${taskTitle || 'task'}"`
+                })
+            }).catch(err => console.error("Notification trigger failed:", err));
 
             setNewMessage('');
         } catch (error) {
