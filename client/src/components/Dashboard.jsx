@@ -188,7 +188,11 @@ export default function Dashboard() {
 
             if (!paymentRes.ok) {
                 const err = await paymentRes.json();
-                addToast(err.error || 'Payment failed', 'error');
+                if (err.error?.toLowerCase().includes('balance')) {
+                    addToast('Insufficient wallet balance! Please Top Up in your Wallet.', 'error');
+                } else {
+                    addToast(err.error || 'Payment failed', 'error');
+                }
                 return;
             }
 
@@ -625,7 +629,7 @@ export default function Dashboard() {
                     {/* Accepted/Submitted - Seeker release payment */}
                     {(task.status === 'accepted' || task.status === 'submitted') && task.seekerId === currentUser.uid && (
                         <button className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '0.25rem 0.75rem' }} onClick={() => handleComplete(task.id)}>
-                            Release Payment & Complete
+                            {task.status === 'submitted' ? 'Approve & Release Payment' : 'Release Payment Early'}
                         </button>
                     )}
 
