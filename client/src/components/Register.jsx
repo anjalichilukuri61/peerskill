@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../firebase'; // Need auth to get token for backend
+import API_URL from '../config/api';
 
 export default function Register() {
     const [email, setEmail] = useState('');
@@ -24,7 +25,7 @@ export default function Register() {
 
             // 2. Create User Profile in Backend (Firestore)
             const token = await user.getIdToken();
-            const res = await fetch('http://localhost:5000/api/auth/register', {
+            const res = await fetch(`${API_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

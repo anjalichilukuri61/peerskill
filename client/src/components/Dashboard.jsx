@@ -5,6 +5,7 @@ import { auth } from '../firebase';
 import { Plus, Check, X, Clock, Student, ChalkboardTeacher, Trash, CalendarBlank, ChatCircle } from 'phosphor-react';
 import Chat from './Chat';
 import ReviewModal from './ReviewModal';
+import API_URL from '../config/api';
 
 export default function Dashboard() {
     const { currentUser, userData } = useAuth();
@@ -37,7 +38,7 @@ export default function Dashboard() {
     async function fetchTasks() {
         try {
             const token = await currentUser.getIdToken();
-            let url = 'http://localhost:5000/api/tasks';
+            let url = `${API_URL}/api/tasks`;
 
             // Basic filtering client-side for now or query params if backend supports
             // Our backend supports ?status=open but we might want to see accepted ones too
@@ -104,7 +105,7 @@ export default function Dashboard() {
             }
             delete submissionTask.customCategory; // Clean up before sending
 
-            const res = await fetch('http://localhost:5000/api/tasks', {
+            const res = await fetch(`${API_URL}/api/tasks`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -139,7 +140,7 @@ export default function Dashboard() {
 
         try {
             const token = await currentUser.getIdToken();
-            const res = await fetch(`http://localhost:5000/api/tasks/${taskId}/accept`, {
+            const res = await fetch(`${API_URL}/api/tasks/${taskId}/accept`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json', // Need content type for body
@@ -166,13 +167,13 @@ export default function Dashboard() {
             const token = await currentUser.getIdToken();
 
             // Get task details first to know the amount and seeker
-            const taskRes = await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
+            const taskRes = await fetch(`${API_URL}/api/tasks/${taskId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const task = await taskRes.json();
 
             // Process payment from seeker to provider
-            const paymentRes = await fetch('http://localhost:5000/api/wallet/pay', {
+            const paymentRes = await fetch(`${API_URL}/api/wallet/pay`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -192,7 +193,7 @@ export default function Dashboard() {
             }
 
             // Mark task as complete
-            const completeRes = await fetch(`http://localhost:5000/api/tasks/${taskId}/complete`, {
+            const completeRes = await fetch(`${API_URL}/api/tasks/${taskId}/complete`, {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -214,7 +215,7 @@ export default function Dashboard() {
         setIsSubmittingReview(true);
         try {
             const token = await currentUser.getIdToken();
-            const res = await fetch('http://localhost:5000/api/reviews', {
+            const res = await fetch(`${API_URL}/api/reviews`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -245,7 +246,7 @@ export default function Dashboard() {
     async function handleApprovePrice(taskId) {
         try {
             const token = await currentUser.getIdToken();
-            const res = await fetch(`http://localhost:5000/api/tasks/${taskId}/approve-price`, {
+            const res = await fetch(`${API_URL}/api/tasks/${taskId}/approve-price`, {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -266,7 +267,7 @@ export default function Dashboard() {
         if (!window.confirm('Reject this price proposal? The task will return to open status.')) return;
         try {
             const token = await currentUser.getIdToken();
-            const res = await fetch(`http://localhost:5000/api/tasks/${taskId}/reject-price`, {
+            const res = await fetch(`${API_URL}/api/tasks/${taskId}/reject-price`, {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -287,7 +288,7 @@ export default function Dashboard() {
         if (!window.confirm('Are you sure you want to delete this task?')) return;
         try {
             const token = await currentUser.getIdToken();
-            const res = await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
+            const res = await fetch(`${API_URL}/api/tasks/${taskId}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -310,7 +311,7 @@ export default function Dashboard() {
 
         try {
             const token = await currentUser.getIdToken();
-            const res = await fetch(`http://localhost:5000/api/tasks/${taskId}/submit`, {
+            const res = await fetch(`${API_URL}/api/tasks/${taskId}/submit`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

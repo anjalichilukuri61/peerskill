@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { ShieldCheck, Check, X } from 'phosphor-react';
+import API_URL from '../config/api';
 
 export default function AdminDashboard() {
     const { currentUser } = useAuth();
@@ -16,7 +17,7 @@ export default function AdminDashboard() {
     async function fetchWithdrawals() {
         try {
             const token = await currentUser.getIdToken();
-            const res = await fetch('http://localhost:5000/api/admin/withdrawals', {
+            const res = await fetch(`${API_URL}/api/admin/withdrawals`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -44,7 +45,7 @@ export default function AdminDashboard() {
 
         try {
             const token = await currentUser.getIdToken();
-            const res = await fetch(`http://localhost:5000/api/admin/withdrawals/${id}/process`, {
+            const res = await fetch(`${API_URL}/api/admin/withdrawals/${id}/process`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

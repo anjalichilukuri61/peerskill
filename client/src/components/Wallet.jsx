@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { Wallet as WalletIcon, TrendUp, Clock, ArrowUp, ArrowDown, Bank } from 'phosphor-react';
+import API_URL from '../config/api';
 
 export default function Wallet() {
     const { currentUser } = useAuth();
@@ -24,7 +25,7 @@ export default function Wallet() {
     async function fetchBalance() {
         try {
             const token = await currentUser.getIdToken();
-            const res = await fetch('http://localhost:5000/api/wallet/balance', {
+            const res = await fetch(`${API_URL}/api/wallet/balance`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -38,7 +39,7 @@ export default function Wallet() {
     async function fetchTransactions() {
         try {
             const token = await currentUser.getIdToken();
-            const res = await fetch('http://localhost:5000/api/wallet/transactions', {
+            const res = await fetch(`${API_URL}/api/wallet/transactions`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -54,7 +55,7 @@ export default function Wallet() {
         setLoading(true);
         try {
             const token = await currentUser.getIdToken();
-            const orderRes = await fetch('http://localhost:5000/api/wallet/create-razorpay-order', {
+            const orderRes = await fetch(`${API_URL}/api/wallet/create-razorpay-order`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ amount })
@@ -72,7 +73,7 @@ export default function Wallet() {
                 order_id: orderData.orderId,
                 handler: async function (response) {
                     try {
-                        const verifyRes = await fetch('http://localhost:5000/api/wallet/verify-razorpay-payment', {
+                        const verifyRes = await fetch(`${API_URL}/api/wallet/verify-razorpay-payment`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                             body: JSON.stringify({
@@ -114,7 +115,7 @@ export default function Wallet() {
         setWithdrawLoading(true);
         try {
             const token = await currentUser.getIdToken();
-            const res = await fetch('http://localhost:5000/api/wallet/withdraw', {
+            const res = await fetch(`${API_URL}/api/wallet/withdraw`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ amount: withdrawAmount, upiId })

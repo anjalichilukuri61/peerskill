@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Star, CheckCircle } from 'phosphor-react';
+import API_URL from '../config/api';
 
 export default function Profile() {
     const { currentUser } = useAuth();
@@ -26,7 +27,7 @@ export default function Profile() {
             const token = await currentUser.getIdToken();
 
             const res = await fetch(
-                `http://localhost:5000/api/users/${currentUser.uid}`,
+                `${API_URL}/api/users/${currentUser.uid}`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`
@@ -72,7 +73,7 @@ export default function Profile() {
             }
 
             const res = await fetch(
-                'http://localhost:5000/api/users/profile',
+                `${API_URL}/api/users/profile`,
                 {
                     method: 'PUT',
                     headers: {
