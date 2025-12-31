@@ -26,6 +26,19 @@ export function AuthProvider({ children }) {
         return signOut(auth);
     }
 
+    async function refreshUserData() {
+        if (!currentUser) return;
+        try {
+            const docRef = doc(db, 'users', currentUser.uid);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                setUserData(docSnap.data());
+            }
+        } catch (error) {
+            console.error("Error refreshing user data", error);
+        }
+    }
+
     // Fetch Firestore user data when auth state changes
     useEffect(() => {
         let mounted = true;
@@ -72,7 +85,8 @@ export function AuthProvider({ children }) {
         userData,
         signup,
         login,
-        logout
+        logout,
+        refreshUserData
     };
 
     if (loading) {

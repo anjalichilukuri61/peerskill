@@ -58,48 +58,72 @@ export default function Wallet() {
             const orderRes = await fetch(`${API_URL}/api/wallet/create-razorpay-order`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ amount })
+                body: JSON.stringify({ amount: Number(amount) })
             });
 
             const orderData = await orderRes.json();
             if (!orderRes.ok) throw new Error(orderData.error);
 
-            const options = {
-                key: orderData.keyId,
-                amount: orderData.amount,
-                currency: orderData.currency,
-                name: 'PeerSkill Hub',
-                description: 'Wallet Top-up',
-                order_id: orderData.orderId,
-                handler: async function (response) {
-                    try {
-                        const verifyRes = await fetch(`${API_URL}/api/wallet/verify-razorpay-payment`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                            body: JSON.stringify({
-                                razorpay_order_id: response.razorpay_order_id,
-                                razorpay_payment_id: response.razorpay_payment_id,
-                                razorpay_signature: response.razorpay_signature
-                            })
-                        });
-                        if (verifyRes.ok) {
-                            setAmount('');
-                            fetchBalance();
-                            fetchTransactions();
-                            addToast(`₹${amount} added successfully!`, 'success');
-                        } else {
+            if (orderData.isMockOrder) {
+                // Skip Razorpay widget, simulate success
+                const verifyRes = await fetch(`${API_URL}/api/wallet/verify-razorpay-payment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({
+                        razorpay_order_id: orderData.orderId,
+                        razorpay_payment_id: `demo_payment_${Date.now()}`,
+                        razorpay_signature: 'demo_signature',
+                        amount: Number(amount)
+                    })
+                });
+                if (verifyRes.ok) {
+                    setAmount('');
+                    fetchBalance();
+                    fetchTransactions();
+                    addToast(`₹${amount} added in demo mode!`, 'success');
+                } else {
+                    const verifyData = await verifyRes.json();
+                    addToast(verifyData.error || 'Mock payment failed', 'error');
+                }
+                setLoading(false);
+            } else {
+                const options = {
+                    key: orderData.keyId,
+                    amount: orderData.amount,
+                    currency: orderData.currency,
+                    name: 'PeerSkill Hub',
+                    description: 'Wallet Top-up',
+                    order_id: orderData.orderId,
+                    handler: async function (response) {
+                        try {
+                            const verifyRes = await fetch(`${API_URL}/api/wallet/verify-razorpay-payment`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                body: JSON.stringify({
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_signature: response.razorpay_signature
+                                })
+                            });
+                            if (verifyRes.ok) {
+                                setAmount('');
+                                fetchBalance();
+                                fetchTransactions();
+                                addToast(`₹${amount} added successfully!`, 'success');
+                            } else {
+                                addToast('Payment verification failed', 'error');
+                            }
+                        } catch (error) {
+                            console.error(error);
                             addToast('Payment verification failed', 'error');
                         }
-                    } catch (error) {
-                        console.error(error);
-                        addToast('Payment verification failed', 'error');
-                    }
-                    setLoading(false);
-                },
-                modal: { ondismiss: () => { setLoading(false); addToast('Payment cancelled', 'info'); } }
-            };
-            const rzp = new window.Razorpay(options);
-            rzp.open();
+                        setLoading(false);
+                    },
+                    modal: { ondismiss: () => { setLoading(false); addToast('Payment cancelled', 'info'); } }
+                };
+                const rzp = new window.Razorpay(options);
+                rzp.open();
+            }
         } catch (error) {
             console.error(error);
             addToast('Failed to initiate payment', 'error');

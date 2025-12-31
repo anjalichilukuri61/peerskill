@@ -4,10 +4,20 @@ const { db, auth } = require('../firebase');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 
-// Initialize Razorpay
+const realKeyId = process.env.RAZORPAY_KEY_ID;
+const realKeySecret = process.env.RAZORPAY_KEY_SECRET;
+
+const hasRazorpayKeys = Boolean(
+    realKeyId &&
+    realKeySecret &&
+    realKeyId !== 'rzp_test_dummy' &&
+    realKeySecret !== 'dummy_secret'
+);
+
+// Initialize Razorpay (falls back to dummy keys when running in mock mode)
 const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_dummy',
-    key_secret: process.env.RAZORPAY_KEY_SECRET || 'dummy_secret'
+    key_id: hasRazorpayKeys ? realKeyId : 'rzp_test_dummy',
+    key_secret: hasRazorpayKeys ? realKeySecret : 'dummy_secret'
 });
 
 // Middleware
@@ -186,6 +196,18 @@ router.post('/create-razorpay-order', verifyToken, async (req, res) => {
             return res.status(400).json({ error: 'Invalid amount' });
         }
 
+        if (!hasRazorpayKeys) {
+            console.log('[Wallet] Mock top-up order generated');
+            // Simulated order response for demo
+            return res.json({
+                orderId: `demo_order_${Date.now()}`,
+                amount: amountNum * 100,
+                currency: 'INR',
+                keyId: 'rzp_test_dummy',
+                isMockOrder: true
+            });
+        }
+
         const options = {
             amount: amountNum * 100, // Convert to paise
             currency: 'INR',
@@ -209,34 +231,46 @@ router.post('/create-razorpay-order', verifyToken, async (req, res) => {
 // POST /api/wallet/verify-razorpay-payment - Verify and process payment
 router.post('/verify-razorpay-payment', verifyToken, async (req, res) => {
     try {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, amount } = req.body;
 
-        // Verify signature
-        const sign = razorpay_order_id + '|' + razorpay_payment_id;
-        const expectedSign = crypto
-            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-            .update(sign.toString())
-            .digest('hex');
+        let creditedAmount = Number(amount) || 0;
 
-        if (razorpay_signature !== expectedSign) {
-            return res.status(400).json({ error: 'Invalid payment signature' });
+        if (!hasRazorpayKeys) {
+            // In mock mode, just trust the payload
+            if (!creditedAmount || creditedAmount <= 0) {
+                return res.status(400).json({ error: 'Invalid mock payment amount' });
+            }
+        } else {
+            // Real verification flow
+            if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+                return res.status(400).json({ error: 'Missing Razorpay payment details' });
+            }
+
+            const sign = razorpay_order_id + '|' + razorpay_payment_id;
+            const expectedSign = crypto
+                .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+                .update(sign.toString())
+                .digest('hex');
+
+            if (razorpay_signature !== expectedSign) {
+                return res.status(400).json({ error: 'Invalid payment signature' });
+            }
+
+            const payment = await razorpay.payments.fetch(razorpay_payment_id);
+
+            if (payment.status !== 'captured' && payment.status !== 'authorized') {
+                return res.status(400).json({ error: 'Payment not successful' });
+            }
+
+            creditedAmount = payment.amount / 100; // Convert from paise to rupees
         }
-
-        // Fetch payment details
-        const payment = await razorpay.payments.fetch(razorpay_payment_id);
-
-        if (payment.status !== 'captured' && payment.status !== 'authorized') {
-            return res.status(400).json({ error: 'Payment not successful' });
-        }
-
-        const amount = payment.amount / 100; // Convert from paise to rupees
 
         // Update wallet balance
         const walletRef = db.collection('wallets').doc(req.user.uid);
         const walletDoc = await walletRef.get();
 
         const currentBalance = walletDoc.exists ? (walletDoc.data().balance || 0) : 0;
-        const newBalance = currentBalance + amount;
+        const newBalance = currentBalance + creditedAmount;
 
         await walletRef.set({ balance: newBalance, updatedAt: new Date().toISOString() }, { merge: true });
 
@@ -244,7 +278,7 @@ router.post('/verify-razorpay-payment', verifyToken, async (req, res) => {
         await db.collection('transactions').add({
             userId: req.user.uid,
             type: 'topup',
-            amount: amount,
+            amount: creditedAmount,
             balanceAfter: newBalance,
             razorpayOrderId: razorpay_order_id,
             razorpayPaymentId: razorpay_payment_id,

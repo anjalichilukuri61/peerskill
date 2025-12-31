@@ -55,4 +55,26 @@ router.put('/profile', verifyToken, async (req, res) => {
     }
 });
 
+// POST /api/users/verify-id
+router.post('/verify-id', verifyToken, async (req, res) => {
+    try {
+        const { collegeIdUrl, isVerified, name, rollNumber } = req.body;
+        const userRef = db.collection('users').doc(req.user.uid);
+
+        const updates = {
+            isVerified: isVerified === true,
+            verificationStatus: isVerified ? 'verified' : 'pending'
+        };
+
+        if (collegeIdUrl) updates.collegeIdUrl = collegeIdUrl;
+        if (name) updates.name = name;
+        if (rollNumber) updates.rollNumber = rollNumber;
+
+        await userRef.set(updates, { merge: true });
+        res.json({ success: true, verificationStatus: updates.verificationStatus });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;

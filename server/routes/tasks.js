@@ -115,6 +115,10 @@ router.post('/:id/apply', verifyToken, async (req, res) => {
         if (taskDoc.data().seekerId === req.user.uid) return res.status(400).json({ error: 'Cannot apply for own task' });
 
         const userDoc = await db.collection('users').doc(req.user.uid).get();
+        if (!userDoc.exists || !userDoc.data().isVerified) {
+            return res.status(403).json({ error: 'Only verified students can apply for tasks. Please upload your ID card or use a student email.' });
+        }
+
         const applicantName = userDoc.exists ? userDoc.data().name : 'Unknown User';
 
         const application = {
@@ -272,6 +276,12 @@ router.post('/:id/chat-notify', verifyToken, async (req, res) => {
         if (!taskDoc.exists) return res.status(404).json({ error: 'Task not found' });
 
         const taskData = taskDoc.data();
+
+        // Authorization: Ensure sender is part of this task
+        if (req.user.uid !== taskData.seekerId && req.user.uid !== taskData.providerId) {
+            return res.status(403).json({ error: 'Not authorized to send messages for this task' });
+        }
+
         const recipientId = req.user.uid === taskData.seekerId
             ? taskData.providerId
             : taskData.seekerId;

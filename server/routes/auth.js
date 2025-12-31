@@ -32,6 +32,8 @@ router.post('/register', verifyToken, async (req, res) => {
         }
 
         const isStudentEmail = ['.edu', '.ac.in', '.gov.in', 'university', 'college'].some(domain => email.toLowerCase().includes(domain));
+        const hasIdCard = !!collegeIdUrl;
+        const ocrVerified = req.body.isVerified === true;
 
         const newUser = {
             uid,
@@ -46,7 +48,8 @@ router.post('/register', verifyToken, async (req, res) => {
             walletBalance: 0,
             averageRating: 0,
             ratingCount: 0,
-            isVerified: isStudentEmail,
+            isVerified: isStudentEmail || ocrVerified, // Verified if email is student OR OCR passed
+            verificationStatus: (isStudentEmail || ocrVerified) ? 'verified' : (hasIdCard ? 'pending' : 'unverified'),
             createdAt: new Date().toISOString()
         };
 
